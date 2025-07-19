@@ -1,0 +1,97 @@
+# import pandas as pd
+import sys
+import json
+from pathlib import Path
+
+'''
+Format: python check.py decklist_path format_name {json_path, "data/scryfall.json"} {ban_list_path, none} {deck_size_min, 60} {deck_size_max, 80} {sideboard_size_max, 15}
+{arg, def} indicates an optional argument with default def
+decklist_path should be a .txt in the following format: (Either MTGA or MTGO format accepted)
+4 Card Name 1
+3 Card Name 2
+...
+Sideboard
+4 Card Name
+etc.
+
+Lists will also be accepted with a ':' after Sideboard and if
+the list is preceded by miscellaneous text, as long as the first
+card name is preceeded "Deck:".
+
+ban_list_path should be a .txt with the name of each banned card within
+
+Card/format names are not case sensitive (everything forced to lower case)
+
+Card name must perfectly match the name in Scryfall database. Partial matches are not allowed.
+'''
+
+# I kind of hate python so sorry if this is sus ¯\_(ツ)_/¯
+
+# TODO:
+# - count total deck size
+# - check whitelist/banlist
+# - allow sideboard
+# - allow Deck: ... Sideboard: ... format
+#
+# possible issues:
+# - split cards (name1 // name2)
+# - online only or alchemy erratas of cards
+
+format_name = sys.argv[2].lower()
+FORMAT_ISSUE = format_name + " is not a legal format name, double check spelling. Cards will be assumed legal unless in banlist."
+
+json_path = "data/scryfall.json"
+if len(sys.argv) > 3:
+    json_path = sys.argv[3]
+scryfall_file = open(json_path, encoding="utf-8")
+scryfall : dict = json.load(scryfall_file)
+scryfall_file.close()
+
+# read txt
+deck_txt = open(sys.argv[1])
+deck_list = dict()
+issues = []
+for line in deck_txt: # starting with simple, no "Deck" + no "Sideboard"
+    line = line.lower()
+    space_index = line.find(" ")
+    num = int(line[:space_index])
+    card_name = line[space_index+1:]
+    if "\n" in card_name:
+        card_name = card_name[:-1]
+    
+    if card_name in deck_list:
+        deck_list[card_name] += num
+    else:
+        deck_list[card_name] = num
+    ...
+deck_txt.close()
+
+for name, num in deck_list.items():
+    # card count
+    if num > 4:
+        issue = "Number of " + name + " is greater than 4. Disregard if card text allows this."
+        issues.append(issue)
+    # also need to check for total deck size but w/e
+    
+    # real card
+    matches = [obj for obj in scryfall if (name == obj["name"].lower()) and (not "component" in obj or not obj["component"] == "token")]
+    if len(matches) == 0:
+        issues.append("No matches for " + name + " in Scryfall database.")
+    elif len(matches) > 1:
+        issues.append("Multiple (" + str(len(matches)) + ") matches for " + name + " in Scryfall database.")
+    else:
+        # card legality
+        entry = matches[0]
+        legalities = entry["legalities"]
+        if not format_name in legalities:
+            if not FORMAT_ISSUE in issues:
+                issues.append(FORMAT_ISSUE)
+        elif not legalities[format_name] == "legal":
+            issues.append(name + " not legal in " + format_name + ".")
+    
+if len(issues) == 0:
+    print("Deck allowed, passed all tests.")
+else:
+    print("Deck not allowed, collected " + str(len(issues)) + " issues:")
+    for issue in issues:
+        print(issue)

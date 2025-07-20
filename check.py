@@ -23,6 +23,10 @@ ban_list_path should be a .txt with the name of each banned card within
 Card/format names are not case sensitive (everything forced to lower case)
 
 Card name must perfectly match the name in Scryfall database. Partial matches are not allowed.
+
+Don't do weird stuff like negative or 0 counts of cards. That's on you.
+
+If you don't have the data from scryfall, download it here under "Oracle Cards": https://scryfall.com/docs/api/bulk-data
 '''
 
 # I kind of hate python so sorry if this is sus ¯\_(ツ)_/¯
@@ -34,7 +38,7 @@ Card name must perfectly match the name in Scryfall database. Partial matches ar
 # - allow Deck: ... Sideboard: ... format
 #
 # possible issues:
-# - split cards (name1 // name2)
+# - split cards formatting (name1 // name2)
 # - online only or alchemy erratas of cards
 
 format_name = sys.argv[2].lower()
@@ -56,7 +60,7 @@ for line in deck_txt: # starting with simple, no "Deck" + no "Sideboard"
     space_index = line.find(" ")
     num = int(line[:space_index])
     card_name = line[space_index+1:]
-    if "\n" in card_name:
+    if card_name[-1] == "\n":
         card_name = card_name[:-1]
     
     if card_name in deck_list:
@@ -66,28 +70,31 @@ for line in deck_txt: # starting with simple, no "Deck" + no "Sideboard"
     ...
 deck_txt.close()
 
-for name, num in deck_list.items():
+for name, num in deck_list.items():    
+    # real card
+    matches = [obj for obj in scryfall if (name == obj["name"].lower()) and (not "component" in obj or not obj["component"] == "token")] # could change to contains/in check but then there could be partial matches
+    if len(matches) == 0:
+        issues.append("No matches for " + name + " in Scryfall database.")
+        continue
+    elif len(matches) > 1:
+        # should not be possible but I could have missed something. This was possible with tokens and such earlier.
+        issues.append("Multiple (" + str(len(matches)) + ") matches for " + name + " in Scryfall database.")
+        continue
+    
+    # card legality
+    entry = matches[0]
+    legalities = entry["legalities"]
+    if not format_name in legalities:
+        if not FORMAT_ISSUE in issues:
+            issues.append(FORMAT_ISSUE)
+    elif not legalities[format_name] == "legal":
+        issues.append(name + " not legal in " + format_name + ".")
+        
     # card count
-    if num > 4:
+    if num > 4 and not "basic land" in entry["type_line"].lower():
         issue = "Number of " + name + " is greater than 4. Disregard if card text allows this."
         issues.append(issue)
     # also need to check for total deck size but w/e
-    
-    # real card
-    matches = [obj for obj in scryfall if (name == obj["name"].lower()) and (not "component" in obj or not obj["component"] == "token")]
-    if len(matches) == 0:
-        issues.append("No matches for " + name + " in Scryfall database.")
-    elif len(matches) > 1:
-        issues.append("Multiple (" + str(len(matches)) + ") matches for " + name + " in Scryfall database.")
-    else:
-        # card legality
-        entry = matches[0]
-        legalities = entry["legalities"]
-        if not format_name in legalities:
-            if not FORMAT_ISSUE in issues:
-                issues.append(FORMAT_ISSUE)
-        elif not legalities[format_name] == "legal":
-            issues.append(name + " not legal in " + format_name + ".")
     
 if len(issues) == 0:
     print("Deck allowed, passed all tests.")

@@ -1,7 +1,7 @@
 # For checking MTG decklists (specifically for modified formats).
 
 ## Format:
-```python check.py decklist_path format_name {json_path, "data/scryfall.json"} {ban_list_path, none}```
+```python check.py decklist_path format_name {json_path, "data/scryfall.json"} {ban_list_path, none} {white_list_path, none} ```
 
 {arg, def} indicates an optional argument with default def.
 

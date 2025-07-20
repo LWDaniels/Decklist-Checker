@@ -1,32 +1,6 @@
 import sys
 import json
 
-'''
-Format: python check.py decklist_path format_name {json_path, "data/scryfall.json"} {ban_list_path, none} {deck_size_min, 60} {deck_size_max, 80} {sideboard_size_max, 15} {singleton, false}
-{arg, def} indicates an optional argument with default def
-decklist_path should be a .txt in the following format: (Either MTGA or MTGO format accepted)
-4 Card Name 1
-3 Card Name 2
-...
-Sideboard
-4 Card Name
-etc.
-
-Lists will also be accepted with a ':' after Sideboard and if
-the list is preceded by miscellaneous text, as long as the first
-card name is preceeded "Deck:".
-
-ban_list_path should be a .txt with the name of each banned card within
-
-Card/format names are not case sensitive (everything forced to lower case)
-
-Card name must perfectly match the name in Scryfall database. Partial matches are not allowed.
-
-Don't do weird stuff like negative or 0 counts of cards. That's on you.
-
-If you don't have the data from scryfall, download it here under "Oracle Cards": https://scryfall.com/docs/api/bulk-data
-'''
-
 # I kind of hate python so sorry if this is sus ¯\_(ツ)_/¯
 
 # TODO:
